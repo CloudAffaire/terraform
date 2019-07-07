@@ -1,0 +1,87 @@
+##----------------------------
+##  Terraform: Provisioner  ##
+##----------------------------
+## Syntax
+resource "<resource_type>" "<resource_local_name>"
+{
+  provisioner "<provisioner_type>" {
+    connection "<connection_type>" {}
+  }
+  connection "<connection_type>" {}
+}
+
+## Create a directory and get inside it
+mkdir terraform && cd terraform
+
+## Create main.tf
+vi main.tf
+---------------
+#create a ec2 instance with httpd
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "ap-south-1"
+}
+
+#create the EC2 instance
+resource "aws_instance" "my_web_instance" {
+ami = "ami-0937dcc711d38ef3f"
+instance_type = "t2.micro"
+key_name = "<your_private_key>" #make sure you have your_private_key.pem file
+tags = {
+Name = "my_web_instance"
+}
+provisioner "remote-exec" { #execute the command in remote ec2 instance
+inline = [
+"sudo mkdir -p /var/www/html/", #command to be executed in remote ec2 instance
+"sudo yum install -y httpd",
+"sudo service httpd start",
+"sudo usermod -a -G apache ec2-user",
+"sudo chown -R ec2-user:apache /var/www",
+]
+}
+
+provisioner "local-exec" { #execute the command in local ec2 instance
+command = "echo 'Hello from terraform' > /home/ec2-user/terraform/index.html"
+}
+
+provisioner "file" { #copy file from local ec2 instance to remote ec2 instance
+source = "index.html"
+destination = "/var/www/html/index.html"
+}
+
+connection { #ssh connection details for remote ec2 instance
+type = "ssh"
+user = "ec2-user"
+password = ""
+#copy <your_private_key.pem> in your local instance home directory
+#chmod 400 <your_private_key.pem>
+private_key = "${file("/home/ec2-user/your_private_key.pem")}"
+}
+}
+
+output "we_server_address" {
+value = "${aws_instance.my_web_instance.public_dns}"
+}
+----------------
+:wq
+
+## Format code
+terraform fmt
+
+## Initialize terraform
+terraform init
+
+## Create the resource
+terraform apply
+
+#Copy the we_server_address from output and check in your favourite browser
+
+## List outputs
+terraform output
+
+## Destroy the resources
+terraform destroy
+
+## Cleanup
+cd .. && rm -rf terraform
