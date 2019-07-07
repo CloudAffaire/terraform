@@ -1,0 +1,205 @@
+##------------------------
+##  Terraform: Modules  ##
+##------------------------
+##  Directory structure
+.
+├── main.tf
+├── outputs.tf
+├── variables.tf
+└── module
+   ├── subnet
+   │   ├── main.tf
+   │   ├── outputs.tf
+   │   └── variables.tf
+   └── vpc
+       ├── main.tf
+       ├── outputs.tf
+       └── variables.tf
+       
+## Create a directory name terraform and get inside it
+mkdir terraform && cd terraform
+
+## Create a directory name module and get inside it
+mkdir module && cd module
+
+## Create a directory named vpc and subnet
+mkdir vpc subnet
+
+## Get inside vpc directory
+cd vpc
+
+## Create main.tf under vpc directory
+vi main.tf
+-----------------------
+#creates one vpc
+resource "aws_vpc" "myvpc" {
+cidr_block = "${var.vpc_cidr}"
+tags {
+Name = "myvpc"
+}
+}
+-----------------------
+:wq
+
+## Create variables.tf under vpc directory
+vi variables.tf
+-----------------------
+#declare variables for main.tf under vpc directory
+variable "vpc_cidr" {
+description = "CIDR block of VPC"
+default = "192.168.0.0/16"
+}
+-----------------------
+:wq
+
+## Create outputs.tf under vpc directory
+vi outputs.tf
+-----------------------
+#generates vpc attributes that can be passed to other modules
+#or printed as output in terraform apply
+output "vpc_id" {
+description = "The ID of the VPC"
+value = "${aws_vpc.myvpc.id}"
+}
+-----------------------
+:wq
+
+## Get inside subnet directory
+cd .. && cd subnet
+
+## Create main.tf under subnet directory
+vi main.tf
+-----------------------
+#creates one subnet
+resource "aws_subnet" "myvpc_subnet" {
+vpc_id = "${var.vpc_id}"
+cidr_block = "${var.subnet_cidr}"
+availability_zone = "${var.subnet_availability_zone}"
+tags {
+   Name = "myvpc_subnet"
+  }
+}
+-----------------------
+:wq
+
+## Create variables.tf under subnet directory
+vi variables.tf
+-----------------------
+#declares variables for main.tf under subnet directory
+variable "vpc_id" {
+description = "VPC ID"
+default = ""
+}
+variable "subnet_cidr" {
+description = "CIDR block for the subnet"
+default = ""
+}
+variable "subnet_availability_zone" {
+description = "Availability zone of the subnet"
+default = ""
+}
+-----------------------
+:wq
+
+## Create outputs.tf under subnet directory
+vi outputs.tf
+-----------------------
+#generates subnet attributes that can be passed to other modules
+output "subnet_id" {
+description = "Subnet ID"
+value = "${aws_subnet.myvpc_subnet.id}"
+}
+-----------------------
+:wq
+
+## Go to parent directory
+cd /home/ec2-user/terraform
+
+## Create main.tf under terraform directory
+vi main.tf
+-----------------------
+#Creates a VPC and a subnet
+provider "aws" {
+access_key = "${var.access_key}"
+secret_key = "${var.secret_key}"
+region = "${var.region}"
+}
+
+#module vpc called
+module "vpc" {
+source = "./module/vpc"
+vpc_cidr = "${var.vpc_cidr}"
+}
+
+#module subnet called
+module "subnet" {
+source = "./module/subnet"
+#observe vpc id is passed from module vpc to module subnet
+vpc_id = "${module.vpc.vpc_id}"
+subnet_cidr = "${var.subnet_cidr}"
+subnet_availability_zone = "${var.subnet_availability_zone}"
+}
+-----------------------
+:wq
+
+## Create variables.tf under terraform directory
+vi variables.tf
+-----------------------
+#declare variables for main.tf in terraform directory
+variable "access_key" {
+default = "<your_access_key>"
+}
+variable "secret_key" {
+default = "<your_secret_key>"
+}
+variable "region" {
+default = "ap-south-1"
+}
+variable "subnet_availability_zone" {
+default = "ap-south-1a"
+}
+variable "vpc_cidr" {
+default = "10.0.0.0/16" #overrides default 192.168.0.0/16
+}
+variable "subnet_cidr" {
+default = "10.0.0.0/24"
+}
+-----------------------
+:wq
+
+## Create outputs.tf under terraform directory
+vi outputs.tf
+-----------------------
+#generate output
+output "vpc_id" {
+description = "The ID of the VPC"
+value = "${module.vpc.vpc_id}"
+}
+output "subnet_id" {
+description = "The ID of the Subnet"
+value = "${module.subnet.subnet_id}"
+}
+-----------------------
+:wq
+
+## Format the code
+terraform fmt
+
+## Initialize the provider
+terraform init
+
+## Plan the changes
+terraform plan
+
+## Apply the changes
+terraform apply
+
+## Show state details
+terraform show
+
+## Cleanup
+## Destory resources
+terraform destory
+
+## Remove terraform directory
+cd .. && rm -rf terraform
