@@ -1,0 +1,87 @@
+##------------------------------
+##  Terraform: Variable File  ##
+##------------------------------
+## Create a directory and get inside it
+mkdir terraform && cd terraform
+
+## Create terraform.tfvars (all variables will be declared in this file and called in main.tf file)
+vi terraform.tfvars
+---------------
+variable "aws_access_key" {
+default = "<your_access_key>"
+}
+variable "aws_secret_key" {
+default = "<your_secret_key>"
+}
+variable "vpc_cidr" {
+default = "10.0.0.0/10"
+}
+variable "vpc_tag_name" { #variable type string
+type = "string"
+default = "myvpc"
+}
+variable "subnet_count" { #variable type integer
+type = "string"
+default = "2"
+}
+variable "subnet_public_ip" { #variable type boolean
+type = "string"
+default = "true"
+}
+variable "subnet_cidrs" { #variable type list
+type = "list"
+default = ["10.0.1.0/24","10.0.2.0/24"]
+}
+variable "region" { #variable type map
+type = "map"
+default = {
+"Mumbai" = "ap-south-1"
+"Singapore" = "ap-southeast-1"
+"Sydney" = "ap-southeast-2"
+}
+}
+---------------
+:wq
+
+## Create main.tf
+vi main.tf
+---------------
+provider "aws" {
+access_key = "${var.aws_access_key}"
+secret_key = "${var.aws_secret_key}"
+region = "${var.region["Mumbai"]}" #get variable region value (ap-south-1)
+}
+resource "aws_vpc" "myvpc" {
+cidr_block = "${var.vpc_cidr}"
+tags {
+Name = "${var.vpc_tag_name}" #get variable vpc_tag_name value (myvpc)
+}
+}
+resource "aws_subnet" "myvpc_subnet" {
+count = "${var.subnet_count}" #get variable subnet_count value (2)
+vpc_id = "${aws_vpc.myvpc.id}"
+cidr_block = "${element(var.subnet_cidrs, count.index)}" #get variable subnet_cidrs value (10.0.1.0/24 and 10.0.2.0/24)
+map_public_ip_on_launch = "${var.subnet_public_ip}" #get variable subnet_public_ip value (true)
+tags {
+   Name = "myvpc_subnet_${count.index+1}"
+  }
+}
+-------------
+:wq
+
+## Format code
+terraform fmt
+
+## Initialize terraform
+terraform init
+
+## Create the resource
+terraform apply
+
+#Login to AWS console and check VPC, subnets
+
+## Destroy the resources
+terraform destroy
+
+## Cleanup
+cd .. && rm -rf terraform
