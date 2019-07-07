@@ -1,0 +1,77 @@
+##-----------------------
+##  Terraform: Output  ##
+##-----------------------
+## Syntax
+output "<name>"
+{
+  value = "<output_value>" 
+    #The value of the output. This can be a string, list, or map.
+  depends_on = ["<resource_type>.<resource_local_name>"]
+    #resource dependencies that Terraform can"t automatically infer.
+    #required only if dependent resource is not accessed by the resource
+  description = "<output_description>"
+    #A human-friendly description for the output.
+  sensitive = true 
+    #when true, output value replaced by sensitive
+}
+
+## Create a directory and get inside it
+mkdir terraform && cd terraform
+
+## Create main.tf
+vi main.tf
+---------------
+#Create a VPC with subnets in each availability zones
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "ap-south-1"
+}
+# Declare a data source
+data "aws_availability_zones" "availability_zones" {}
+resource "aws_vpc" "myvpc" {
+cidr_block = "10.0.0.0/16"
+tags {
+Name = "myvpc"
+}
+}
+resource "aws_subnet" "myvpc_subnets" {
+count = "${length(data.aws_availability_zones.availability_zones.names)}" #returns number of AZ's
+vpc_id = "${aws_vpc.myvpc.id}"
+cidr_block = "${cidrsubnet("${aws_vpc.myvpc.cidr_block}",8,count.index+1)}"
+availability_zone = "${element(data.aws_availability_zones.availability_zones.names,count.index)}" #returens AZ's name
+tags {
+   Name = "myvpc_subnet_${count.index+1}"
+  }
+}
+output "message" {
+value = "VPC and subnets created successfully!"
+}
+output "owner_id" {
+value = "${aws_vpc.myvpc.owner_id}"
+sensitive = true #if ommited, will print aws account id
+depends_on = ["aws_vpc.myvpc"]
+description = "Returns AWS account details"
+}
+----------------
+:wq
+
+## Format code
+terraform fmt
+
+## Initialize terraform
+terraform init
+
+## Create the resource
+terraform apply
+
+#Observe output section at the end of apply
+
+## List outputs
+terraform output
+
+## Destroy the resources
+terraform destroy
+
+## Cleanup
+cd .. && rm -rf terraform
