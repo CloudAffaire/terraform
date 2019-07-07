@@ -1,0 +1,80 @@
+##-----------------------------
+##  Terraform: Installation  ##
+##-----------------------------
+## Create an EC2 AWS Linux 2 instance and an IAM user with admin access
+## and programettic access (Get the Access key and Secret Key)
+## Connect to the AWS instance
+
+############################
+## Terraform installation ##
+############################
+## Get terraform package
+wget https://releases.hashicorp.com/terraform/0.11.13/terraform_0.11.13_linux_amd64.zip
+
+## Unzip the package
+unzip terraform_0.11.13_linux_amd64.zip
+
+## Move the package to /usr/local/bin
+sudo mv terraform /usr/local/bin/ && rm terraform_0.11.13_linux_amd64.zip
+
+## Check if terraform working properly
+terraform --version
+
+## Get help
+terraform
+terraform <command> --help #for example: terraform plan --help
+
+##########################################
+## Create aws resources using terraform ##
+##########################################
+## Create a directory and get inside it
+mkdir terraform && cd terraform
+
+## Create your 1st terraform script
+vi main.tf
+---------------
+#Creates a VPC with cidr block 10.0.0.0/16
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "ap-south-1"
+}
+resource "aws_vpc" "myvpc" {
+cidr_block = "10.0.0.0/16"
+tags {
+Name = "myvpc"
+}}
+---------------
+:wq
+
+## Auto format the terraform files
+terraform fmt
+
+## Initialize terraform (download's provider [AWS] packages)
+terraform init
+
+## Create the terraform plan
+terraform plan
+
+## Create the resources, type yes when prompted (creates a VPC named myvpc in AWS)
+terraform apply
+
+## Check files (due to above apply, terraform.tfstate file created)
+ls
+
+## Show details from terraform.tfstate file
+terraform show
+
+## Show details of a particular resource from terraform.tfstate file
+terraform state show <resource_name> #for example: terraform state show aws_vpc.myvpc
+
+## Delete the resources, type Yes when prompted
+terraform destroy
+
+## Check files (due to above destroy, terraform.tfstate file emptied and terraform.tfstate.backup created as backup)
+ls
+cat terraform.tfstate
+cat terraform.tfstate.backup
+
+## Cleanup
+cd .. && rm -rf terraform
