@@ -1,0 +1,85 @@
+##--------------------------------
+##  Terraform: Module Registry  ##
+##--------------------------------
+## Create a directory name terraform and get inside it
+mkdir terraform && cd terraform
+
+## Create a directory name module and get inside it
+mkdir module && cd module
+
+## Clone the community supported vpc module from GitHub
+## Complete list of modules: https://github.com/terraform-aws-modules
+## git needs to be installed: https://cloudaffaire.com/how-to-install-git-in-aws-ec2-instance/
+git clone https://github.com/terraform-aws-modules/terraform-aws-vpc.git
+
+## Go to parent directory
+cd /home/ec2-user/terraform
+
+## Create main.tf under terraform directory
+vi main.tf
+-----------------------
+#Creates a VPC and subnets
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "ap-south-1"
+}
+
+module "vpc" {
+source = "./module/terraform-aws-vpc/"
+name = "myapp"
+cidr = "10.0.0.0/16"
+azs = ["ap-south-1a", "ap-south-1b"]
+private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+public_subnets = ["10.0.3.0/24", "10.0.4.0/24"]
+tags = {
+Owner = "debjeet"
+Environment = "test"
+}
+vpc_tags = {
+Name = "myvpc"
+}
+}
+-----------------------
+:wq
+
+## Create outputs.tf under terraform directory
+vi outputs.tf
+-----------------------
+#generate output
+output "vpc_id" {
+description = "The ID of the VPC"
+value = "${module.vpc.vpc_id}"
+}
+output "private_subnets" {
+description = "List of IDs of private subnets"
+value = ["${module.vpc.private_subnets}"]
+}
+output "public_subnets" {
+description = "List of IDs of public subnets"
+value = ["${module.vpc.public_subnets}"]
+}
+-----------------------
+:wq
+
+## Format the code
+terraform fmt
+
+## Initialize the provider
+terraform init
+
+## Plan the changes
+terraform plan
+
+## Apply the changes
+terraform apply
+
+## Show state details
+terraform show
+
+## Cleanup
+## Destory resources
+terraform destory
+
+## Remove terraform directory
+cd .. && rm -rf terraform
