@@ -1,0 +1,67 @@
+##-------------------------
+##  Terraform: Override  ##
+##-------------------------
+## Create a directory and get inside it
+mkdir terraform && cd terraform
+
+## Create main.tf
+vi main.tf
+---------------
+#Create a VPC
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "ap-south-1"
+}
+resource "aws_vpc" "myvpc" {
+cidr_block = "10.0.0.0/16"
+tags {
+Name = "myvpc"
+}
+}
+---------------
+:wq
+
+## Format code
+terraform fmt
+
+## Initialize terraform
+terraform init
+
+## Create the resource
+terraform apply
+
+## View state file
+terraform show
+
+## Create an override file
+vi override.tf
+---------------
+#Overrides the VPC configuration
+resource "aws_vpc" "myvpc" {
+cidr_block = "10.0.0.0/16"
+enable_dns_hostnames = true
+tags {
+Name = "mynewvpc"
+}
+}
+---------------
+:wq
+
+## Format code
+terraform fmt
+
+## Plan the changes
+terraform plan
+
+## Apply the changes
+terraform apply
+
+## View state file
+terraform show
+
+## Destroy the resources
+terraform destroy
+
+## Cleanup
+cd .. && rm -rf terraform
