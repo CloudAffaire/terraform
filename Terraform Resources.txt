@@ -1,0 +1,83 @@
+##--------------------------
+##  Terraform: Resources  ##
+##--------------------------
+## Syntax
+resource "<resource_type>" "<resource_local_name>"
+{
+  depends_on = ["<resource_type>.<resource_local_name>"]
+      #resource dependencies that Terraform can"t automatically infer.
+      #required only if dependent upon resource is not accessed by the resource
+  count = <integer> 
+      #for multiple resource creation
+  provider = <"provider.alias">
+      #for selecting non default provider (provider with alias)
+  lifecycle {create_before_destroy/prevent_destroy/ignore_changes}
+      #describes lifecycle of the resource
+      #create_before_destroy: resource will created first before destroy
+      #prevent_destroy: disable resource destroy
+      #ignore_changes: do not update drift as per configuration setting
+  provisioner and connection
+      #for taking extra actions after resource creation, covered in provisioner blog post
+}
+
+## Create a directory and get inside it
+mkdir terraform && cd terraform
+
+## Create main.tf
+vi main.tf
+---------------
+#Create a VPC and a subnet
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "us-east-1"
+}
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+alias = "mumbai" #non default provider defined
+region = "ap-south-1"
+}
+resource "aws_vpc" "myvpc" {
+provider = "aws.mumbai"
+cidr_block = "10.0.0.0/16"
+tags {
+Name = "myvpc"
+}
+}
+resource "aws_subnet" "myvpc_subnet_one" {
+count = 1 #one copy of resource will be created
+depends_on = ["aws_vpc.myvpc"] #for demo purpose, not required as we are explicetly passing vpc id
+provider = "aws.mumbai" #call non default provider
+lifecycle { #defines life cycle of the resource, vpc will be created 1st before destroy
+create_before_destroy = true
+}
+provisioner "local-exec" { #prints message in the terminal of local host
+command = "echo 'creating myvpc subnet'"
+}
+#connection {} #subnet does not support connection attribute, will be covered in provisioner demo.
+vpc_id = "${aws_vpc.myvpc.id}" #vpc id from above vpc resource is passed for subnet creation
+cidr_block = "10.0.0.0/24"
+tags {
+Name = "mybvpc_subnet_${count.index+1}" #count.index starts from zero, creates tag "myvpc_subnet_1"
+}
+}
+---------------
+:wq
+
+## Format code
+terraform fmt
+
+## Initialize terraform
+terraform init
+
+## Create the resource
+terraform apply
+
+#Login to AWS console and check VPC, subnet
+
+## Destroy the resources
+terraform destroy
+
+## Cleanup
+cd .. && rm -rf terraform
