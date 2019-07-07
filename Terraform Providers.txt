@@ -1,0 +1,103 @@
+##-------------------------
+##  Terraform: Provider  ##
+##-------------------------
+## Syntax
+provider "<provider_type>" {
+version = "<provider_version>" #to download and use a specific version of provider package
+alias = "<alias_name>" #for using the same provider with different configurations for different resources
+}
+
+## Create a directory and get inside it
+mkdir terraform && cd terraform
+
+## Create main.tf
+vi main.tf
+---------------
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+alias = "mumbai" #non default provider aws.mumbai
+version = "2.5" #AWS provider version 2.5 will be downloaded
+region = "ap-south-1"
+}
+
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "us-east-1"
+}
+
+provider "google" { #multiple types of provider can be used at the same time
+region = "us-central1"
+}
+
+resource "aws_vpc" "myvpc" {
+provider = "aws.mumbai" #non default provider mumbai has been called
+cidr_block = "10.0.0.0/16"
+}
+---------------
+:wq
+
+## Format code
+terraform fmt
+
+## Initialized terraform (downloads provider [AWS] and [Google] packages)
+terraform init
+
+## Check files (terraform downloaded the AWS and Google provider packages in .terraform directory)
+ls -a
+ls -lh .terraform/plugins/linux_amd64/
+
+## Check providers
+terraform providers
+
+## Create resource
+terraform apply
+
+## Destroy resource
+terraform destroy
+
+## Cleanup
+cd .. && rm -rf terraform
+
+############################################
+##  AWS provider specific configurations  ##
+############################################
+## The AWS provider offers a flexible means of providing credentials for authentication.
+## The following methods are supported, in this order, and explained below:
+## 1. Static credentials
+## 2. Environment variables
+## 3. Shared credentials file
+## 4. EC2 Role
+
+## AWS Provider using Static credentials ##
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "<aws_region_code>"
+}
+
+## AWS Provider using Environment variables ##
+## Export AWS access key, secret key and region
+export AWS_ACCESS_KEY_ID="<your_access_key>"
+export AWS_SECRET_ACCESS_KEY="<your_secret_key>"
+export AWS_DEFAULT_REGION="<aws_region_code>"
+
+## Provider block
+provider "aws" {}
+
+## AWS Provider using Shared Credential File ##
+provider "aws" {
+region = "<aws_region_code>"
+shared_credentials_file = "/Users/tf_user/.aws/creds"
+profile = "aws_profilename"
+}
+
+## AWS Provider using IAM role ##
+provider "aws" {
+assume_role {
+role_arn = "arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME"
+session_name = "optional"
+external_id = "optional"
+}
+}
