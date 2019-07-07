@@ -1,0 +1,75 @@
+##-----------------------
+##  Terraform: Import  ##
+##-----------------------
+## Create a directory and get inside it
+mkdir terraform && cd terraform
+
+## Create main.tf
+vi main.tf
+------------------
+#creates a vpc
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "ap-south-1"
+}
+resource "aws_vpc" "myvpc" {
+cidr_block = "10.0.0.0/16"
+enable_dns_hostnames = true
+tags {
+Name = "myvpc"
+}
+}
+output "vpc_id" {
+value = "${aws_vpc.myvpc.id}"
+}
+------------------
+:wq
+
+## Format code
+terraform fmt
+
+## Initialize terraform
+terraform init
+
+## Create the resource (note down vpc id from output)
+terraform apply
+
+## Create a directory named terraform_import and get inside it
+mkdir terraform_import && cd terraform_import
+
+## Create a resource import
+vi main.tf
+------------------
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "ap-south-1"
+}
+resource "aws_vpc" "myimportedvpc" {
+#if you want to change any configuration,
+#define here. and then apply once configuration is imported
+#in this demo, we will just import the configurations.
+}
+------------------
+:wq
+
+## Format code
+terraform fmt
+
+## Initialize terraform
+terraform init
+
+#note terraform has craeted an empty terraform.tfstate file
+ls
+cat terraform.tfstate #currently empty
+
+## Import the resource to terraform.tfstate file
+terraform import aws_vpc.myimportedvpc vpc-0cf62221259f35885
+
+## View state (myvpc configuration saved as myimported vpc)
+cat terraform.tfstate
+
+## Cleanup
+cd .. && terraform destroy -auto-approve
+cd && rm -r terraform
