@@ -1,0 +1,96 @@
+##-------------------------
+##  Terraform: Backends  ##
+##-------------------------
+## Create a directory and get inside it
+mkdir terraform && cd terraform
+
+## Create a directory for backend resoure creation and get inside it
+mkdir terraform_backend && cd terraform_backend
+
+## Create backend resources
+vi main.tf
+------------------
+#creates a S3 bucket and a dynamoDB table
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "ap-south-1"
+}
+resource "aws_s3_bucket" "mys3bucket" {
+bucket = "my-s3-terraform-backend-cloudaffaire" #needs to be unique across AWS
+force_destroy = true
+tags {
+Name = "S3 bucket for terraform backend state storage"
+}
+}
+
+resource "aws_dynamodb_table" "mydynamodbtable" {
+name = "my-dynamodb-terraform-backend-cloudaffaire"
+hash_key = "LockID"
+read_capacity = 5
+write_capacity = 5
+attribute {
+name = "LockID"
+type = "S"
+}
+tags {
+Name = "dynamoDB table for terraform backend state locking"
+}
+}
+------------------
+:wq
+
+## Format code
+terraform fmt
+
+## Initialize terraform
+terraform init
+
+## Create the resource
+terraform apply
+
+## Move to terraform root directory
+cd ..
+
+## Create main resource
+vi main.tf
+-------------------
+#creates a vpc and stores the state file in S3 bucket
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "ap-south-1"
+}
+terraform {
+backend "s3" {
+bucket = "my-s3-terraform-backend-cloudaffaire"
+dynamodb_table = "my-dynamodb-terraform-backend-cloudaffaire"
+key = "workspace_default"
+region = "ap-south-1"
+}
+}
+resource "aws_vpc" "myvpc" {
+cidr_block = "10.0.0.0/16"
+tags {
+Name = "myvpc"
+}
+}
+-------------------
+:wq
+
+## Format code
+terraform fmt
+
+## Initialize terraform (configures the backend as well)
+terraform init
+
+## Create the resource
+terraform apply
+
+## Check backend details
+cat .terraform/terraform.tfstate
+
+## Cleanup
+terraform destroy #deletes vpc resource
+cd ../terraform_backend
+terraform destroy #deletes s3 and dynamodb table
