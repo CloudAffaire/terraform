@@ -1,0 +1,83 @@
+##--------------------------
+##  Terraform: Workspace  ##
+##--------------------------
+## Create a directory and get inside it
+mkdir terraform && cd terraform
+
+## List all workspaces
+terraform workspace list #Terraform starts with a single workspace named "default" which can't be deleted.
+
+## Create a workspace
+terraform workspace new test
+
+## List files (Terraform stores the workspace states in a directory called terraform.tfstate.d)
+ls #terraform created a new directory terraform.tfstate.d
+ls terraform.tfstate.d/ #terraform created a new directory test inside terraform.tfstate.d
+
+## Switch to the test workspace
+terraform workspace select test #just for demo, already selected when created
+
+## Varify that you are in test workspace
+terraform workspace show
+
+## Create main.tf
+vi main.tf
+---------------
+#creates a vpc
+variable "vpc_tag_name" { #variable type string
+type = "string"
+default = "myvpc"
+}
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "ap-south-1"
+}
+resource "aws_vpc" "myvpc" {
+cidr_block = "10.0.0.0/16"
+tags {
+Name = "${var.vpc_tag_name}_${terraform.workspace}"
+}
+}
+----------------
+:wq
+
+## Format code
+terraform fmt
+
+## Initialize terraform
+terraform init
+
+## Create the resource
+terraform apply
+
+## Check for state file
+ls #no .tfstate file created in root directory
+ls terraform.tfstate.d/test/ #instead tfstate file created under test directory
+
+## Show state details
+terraform show #myvpc_test created
+
+## Create a new workspce named dev
+terraform workspace new dev
+
+## List files
+ls terraform.tfstate.d/ #terraform created a new directory dev inside terraform.tfstate.d
+
+## Plan changes(workspace test state file is not visible in workspace dev, new vpc will be planned)
+terrafrom plan
+
+## Create the resource (new vpc created though we did not change anything in main.tf)
+terraform apply
+
+## Show state details
+terraform show #myvpc_dev created
+
+## Cleanup
+terraform destroy #destroy the dev workspace resources
+terraform workspace select test #switch to test workspace
+terraform workspace delete dev #delete dev workspace
+terraform destroy #destroy the test workspace resources
+terraform workspace select default #switch to default workspace
+terraform workspace delete test #delete test workspace
+cd .. && rm -rf terraform #delete terraform directory
