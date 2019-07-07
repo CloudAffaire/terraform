@@ -1,0 +1,66 @@
+##----------------------------
+##  Terraform: Data Source  ##
+##----------------------------
+## Syntax
+data "<resource_type>" "<name>"
+{
+  depends_on = ["<resource_type>.<resource_local_name>"]
+    #resource dependencies that Terraform can"t automatically infer.
+    #required only if dependent resource is not accessed by the resource
+  count = <integer> 
+    #for multiple resource creation
+  provider = <"provider.alias">
+    #for selecting non default provider (provider with alias)
+  provisioner and connection
+    #for taking extra actions after resource creation
+}
+
+## Create a directory and get inside it
+mkdir terraform && cd terraform
+
+## Create main.tf
+vi main.tf
+---------------
+#Create a VPC with subnets in each availability zones
+provider "aws" {
+access_key = "<your_access_key>"
+secret_key = "<your_secret_key>"
+region = "ap-south-1"
+}
+
+# Declare a data source (fetches AZ’s details)
+data "aws_availability_zones" "availability_zones" {}
+resource "aws_vpc" "myvpc" {
+cidr_block = "10.0.0.0/16"
+tags {
+Name = "myvpc"
+}
+}
+resource "aws_subnet" "myvpc_subnets" {
+count = "${length(data.aws_availability_zones.availability_zones.names)}" #returns number of AZ's
+vpc_id = "${aws_vpc.myvpc.id}"
+cidr_block = "${cidrsubnet("${aws_vpc.myvpc.cidr_block}",8,count.index+1)}"
+availability_zone = "${element(data.aws_availability_zones.availability_zones.names,count.index)}" #returens AZ's name
+tags {
+   Name = "myvpc_subnet_${count.index+1}"
+  }
+}
+----------------
+:wq
+
+## Format code
+terraform fmt
+
+## Initialize terraform
+terraform init
+
+## Create the resource
+terraform apply
+
+#Login to AWS console and check VPC, subnet
+
+## Destroy the resources
+terraform destroy
+
+## Cleanup
+cd .. && rm -rf terraform
